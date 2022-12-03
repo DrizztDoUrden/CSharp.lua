@@ -47,14 +47,14 @@ namespace CSharpLua {
     }
 
     private LuaExpressionSyntax GetObjectCreationInitializer(LuaExpressionSyntax creationExpression, InitializerExpressionSyntax initializer, ExpressionSyntax node) {
-      int prevTempCount = CurFunction.TempCount;
+      // int prevTempCount = CurFunction.TempCount;
       var temp = GetTempIdentifier();
       CurBlock.AddStatement(new LuaLocalVariableDeclaratorSyntax(temp, creationExpression));
       FillObjectInitializerExpression(temp, initializer);
-      var grandparent = initializer!.Parent!.Parent;
-      if (grandparent?.IsKind(SyntaxKind.Argument) == false) {
-        ReleaseTempIdentifiers(prevTempCount);
-      }
+      // var grandparent = initializer!.Parent!.Parent;
+      // if (grandparent?.IsKind(SyntaxKind.Argument) == false) {
+      //   ReleaseTempIdentifiers(prevTempCount);
+      // }
       return !node.Parent.IsKind(SyntaxKind.ExpressionStatement) ? temp : LuaExpressionSyntax.EmptyExpression;
     }
 
@@ -133,8 +133,8 @@ namespace CSharpLua {
           var symbol = semanticModel_.GetCollectionInitializerSymbolInfo(expression).Symbol;
           var name = GetMemberName(symbol);
           var invocation = temp.MemberAccess(name, true).Invocation();
-          var block = new LuaBlockSyntax();
-          PushBlock(block);
+          // var block = new LuaBlockSyntax();
+          // PushBlock(block);
           if (expression.IsKind(SyntaxKind.ComplexElementInitializerExpression)) {
             var initializer = (InitializerExpressionSyntax)expression;
             foreach (var expressionNode in initializer.Expressions) {
@@ -145,8 +145,8 @@ namespace CSharpLua {
             var value = expression.AcceptExpression(this);
             invocation.AddArgument(value);
           }
-          PopBlock();
-          CurBlock.Statements.AddRange(block.Statements);
+          // PopBlock();
+          // CurBlock.Statements.AddRange(block.Statements);
           CurBlock.AddStatement(invocation);
         }
       }

@@ -15,6 +15,8 @@ limitations under the License.
 */
 
 using CSharpLua.LuaAst;
+using ICSharpCode.Decompiler.IL;
+
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -178,19 +180,21 @@ namespace CSharpLua {
         localReservedNames_.Clear();
       }
       functionUpValues_.Remove(function);
-      Contract.Assert(function.TempCount == 0);
+      // Contract.Assert(function.TempCount == 0);
     }
 
     public void PushBlock(LuaBlockSyntax block) {
+      block.TempCount += CurBlockOrNull?.TempCount ?? 0;
       blocks_.Push(block);
     }
 
     public void PopBlock() {
-      var block = blocks_.Pop();
-      if (block.TempCount > 0) {
-        Contract.Assert(CurFunction.TempCount >= block.TempCount);
-        CurFunction.TempCount -= block.TempCount;
-      }
+      /*var block = */blocks_.Pop();
+      //if (block.TempCount > 0) {
+        // Contract.Assert(CurFunction.TempCount >= block.TempCount);
+        // CurFunction.TempCount -= block.TempCount;
+        CurFunction.TempCount = CurBlockOrNull?.TempCount ?? 0;
+      //}
     }
 
     private LuaBlockSyntax CurBlock {
@@ -206,35 +210,12 @@ namespace CSharpLua {
     }
 
     private LuaIdentifierNameSyntax GetTempIdentifier() {
-      int index = CurFunction.TempCount++;
-      string name = LuaSyntaxNode.TempIdentifiers.GetOrDefault(index);
-      if (name == null) {
-        throw new CompilationErrorException($"Your code is startling,{LuaSyntaxNode.TempIdentifiers.Length} temporary variables is not enough");
-      }
-      ++CurBlock.TempCount;
-      return name;
-    }
-
-    private void ReleaseTempIdentifiers(int prevTempCount) {
-      int count = CurFunction.TempCount - prevTempCount;
-      PopTempCount(count);
-    }
-
-    private void PopTempCount(int count) {
-      Contract.Assert(CurBlock.TempCount >= count && CurFunction.TempCount >= count);
-      CurBlock.TempCount -= count;
-      CurFunction.TempCount -= count;
+      ++CurFunction.TempCount;
+      return $"___cslua_tmp_{CurBlock.TempCount++}";
     }
 
     private void AddReleaseTempIdentifier(LuaIdentifierNameSyntax tempName) {
       CurBlock.ReleaseCount++;
-    }
-
-    private void ReleaseTempIdentifiers() {
-      if (CurBlock.ReleaseCount > 0) {
-        PopTempCount(CurBlock.ReleaseCount);
-        CurBlock.ReleaseCount = 0;
-      }
     }
 
     public LuaCompilationUnitSyntax VisitCompilationUnit(CompilationUnitSyntax node, bool isSingleFile = false) {
@@ -1531,7 +1512,7 @@ namespace CSharpLua {
 
     public override LuaSyntaxNode VisitExpressionStatement(ExpressionStatementSyntax node) {
       var expression = node.Expression.AcceptExpression(this);
-      ReleaseTempIdentifiers();
+      // ReleaseTempIdentifiers();
       if (expression != LuaExpressionSyntax.EmptyExpression) {
         if (expression is LuaLiteralExpressionSyntax) {
           return new LuaShortCommentExpressionStatement(expression);

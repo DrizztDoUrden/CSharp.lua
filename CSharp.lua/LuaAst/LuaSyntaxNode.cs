@@ -120,13 +120,6 @@ namespace CSharpLua.LuaAst {
       return SpecialWord(Tokens.Ctor + ctorIndex);
     }
 
-    public static readonly string[] TempIdentifiers = {
-      "default", "extern", "ref", "out", "try",
-      "case", "void", "byte", "char", "uint",
-      "lock",  "using", "fixed", "const", "object",
-      "internal", "virtual",
-    };
-
     private static readonly HashSet<string> ReservedWords = new() {            
       // compiler reserved words
       "System", "Linq",
