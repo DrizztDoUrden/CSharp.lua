@@ -410,17 +410,99 @@ namespace CSharpLua {
           var entryPointInvocation = new LuaInvocationExpressionSyntax(methodTypeName.MemberAccess(methodName));
           manifestStatements.Add(entryPointInvocation);
         }
+
+        var tryAroundManifestBody = new LuaFunctionExpressionSyntax();
+        tryAroundManifestBody.AddStatements(manifestStatements);
+
+        var tryAroundManifestCatch = new LuaFunctionExpressionSyntax();
+        {
+          const int dumpBufferSize = 195;
+          const string indexName = "i";
+          const string bufferName = "buffer";
+          const string exceptionName = "exception";
+          const string endIndexName = "endIndex";
+
+          tryAroundManifestCatch.AddParameter(exceptionName);
+
+          tryAroundManifestCatch.AddStatement(new LuaInvocationExpressionSyntax("PreloadGenClear"));
+          tryAroundManifestCatch.AddStatement(new LuaInvocationExpressionSyntax("PreloadGenStart"));
+
+          var bufferEx = new LuaIdentifierLiteralExpressionSyntax(bufferName);
+          var indexEx = new LuaIdentifierLiteralExpressionSyntax(indexName);
+          var endIndexEx = new LuaIdentifierLiteralExpressionSyntax(endIndexName);
+          var dumpBufferLimitConstEx = new LuaFloatLiteralExpressionSyntax(dumpBufferSize);
+          var bufferLengthEx = new LuaPrefixUnaryExpressionSyntax(bufferEx, "#");
+
+          tryAroundManifestCatch.AddStatement(new LuaLocalVariableDeclaratorSyntax(bufferName,
+            new LuaBinaryExpressionSyntax(
+              new LuaInvocationExpressionSyntax(new LuaMemberAccessExpressionSyntax(
+                new LuaIdentifierLiteralExpressionSyntax(exceptionName),
+                "getMessage",
+                true
+              )),
+              "..",
+              new LuaBinaryExpressionSyntax(
+                new LuaStringLiteralExpressionSyntax("\\n"),
+                "..",
+                new LuaInvocationExpressionSyntax(new LuaMemberAccessExpressionSyntax(
+                  new LuaIdentifierLiteralExpressionSyntax(exceptionName),
+                  "getStackTrace",
+                  true
+                ))
+              )
+            )
+          ));
+
+          tryAroundManifestCatch.AddStatement(new LuaInvocationExpressionSyntax("print", bufferEx));
+
+          {
+            var dumpStrFor = new LuaNumericalForStatementSyntax(indexName,
+              new LuaFloatLiteralExpressionSyntax(1),
+              bufferLengthEx,
+              dumpBufferLimitConstEx);
+
+            dumpStrFor.Body.AddStatement(
+              new LuaLocalVariableDeclaratorSyntax(endIndexName,
+                new LuaInvocationExpressionSyntax("math.min",
+                  new LuaBinaryExpressionSyntax(indexEx, "+", dumpBufferLimitConstEx),
+                  bufferLengthEx
+                )
+              )
+            );
+
+            dumpStrFor.Body.AddStatement(new LuaInvocationExpressionSyntax("Preload",
+              new LuaBinaryExpressionSyntax(
+                new LuaStringLiteralExpressionSyntax("\\n"),
+                "..",
+                new LuaBinaryExpressionSyntax(
+                  new LuaInvocationExpressionSyntax(
+                    new LuaMemberAccessExpressionSyntax(bufferEx, "sub", true),
+                    indexEx,
+                    endIndexEx
+                  ),
+                  "..",
+                  new LuaStringLiteralExpressionSyntax("\\n")
+                )
+              )
+            ));
+
+            tryAroundManifestCatch.AddStatement(dumpStrFor);
+          }
+        }
+
+        tryAroundManifestCatch.AddStatement(new LuaInvocationExpressionSyntax("PreloadGenEnd", new LuaStringLiteralExpressionSyntax("Logs/CSharpLua/MapCrash.txt")));
+
+        var tryAroundManifest = new LuaInvocationExpressionSyntax("System.try", tryAroundManifestBody, tryAroundManifestCatch);
+
         LuaCompilationUnitSyntax luaCompilationUnit = new LuaCompilationUnitSyntax(hasGeneratedMark: false);
         if (manifestAsFunction) {
           var functionExpression = new LuaFunctionExpressionSyntax();
           var initCSharpFunctionDeclarationStatement = new LuaLocalVariablesSyntax() { Initializer = new LuaEqualsValueClauseListSyntax(functionExpression.ArrayOf()) };
           initCSharpFunctionDeclarationStatement.Variables.Add(new LuaSymbolNameSyntax(new LuaIdentifierLiteralExpressionSyntax(kManifestFuncName)));
-          functionExpression.AddStatements(manifestStatements);
+          functionExpression.AddStatement(tryAroundManifest);
           luaCompilationUnit.AddStatement(new LuaLocalDeclarationStatementSyntax(initCSharpFunctionDeclarationStatement));
         } else {
-          foreach (var statement in manifestStatements) {
-            luaCompilationUnit.AddStatement(statement);
-          }
+          luaCompilationUnit.AddStatement(tryAroundManifest);
         }
 
         Write(luaCompilationUnit, writer);
