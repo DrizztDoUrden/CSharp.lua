@@ -1218,7 +1218,10 @@ namespace CSharpLua {
     }
 
     private void CheckValueTypeClone(ITypeSymbol typeSymbol, IdentifierNameSyntax node, ref LuaExpressionSyntax expression, bool isPropertyField = false) {
-      if (typeSymbol.IsCustomValueType() && !generator_.IsReadOnlyStruct(typeSymbol) && !typeSymbol.IsNullableWithBasicElementType()) {
+      if (typeSymbol.IsCustomValueType()
+        && !generator_.IsReadOnlyStruct(typeSymbol)
+        && !typeSymbol.IsNullableWithBasicElementType()
+        && !(typeSymbol.IsNullableType(out var nullableChildType) && generator_.IsReadOnlyStruct(nullableChildType))) {
         bool need = false;
         if (isPropertyField) {
           need = true;
