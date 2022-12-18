@@ -23,6 +23,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis;
 using CSharpLua.LuaAst;
+using ICSharpCode.Decompiler.CSharp.Syntax;
 
 namespace CSharpLua {
   public sealed partial class LuaSyntaxNodeTransform {
@@ -1122,7 +1123,16 @@ namespace CSharpLua {
           sb.Append(identifier.ValueText);
         } else {
           var interpolation = (InterpolationSyntax)content;
-          var expression = WrapStringConcatExpression(interpolation.Expression);
+
+          var formatExpr = interpolation.FormatClause is not null
+            ? new LuaVerbatimStringLiteralExpressionSyntax(interpolation.FormatClause.FormatStringToken.ValueText, false)
+            : null;
+
+          var alignExpr = interpolation.FormatClause is not null
+            ? new LuaVerbatimStringLiteralExpressionSyntax(interpolation.FormatClause.FormatStringToken.ValueText, false)
+            : null;
+
+          var expression = WrapStringConcatExpression(interpolation.Expression, formatExpr, alignExpr);
           expressions.Add(expression);
           sb.Append("%s");
         }
