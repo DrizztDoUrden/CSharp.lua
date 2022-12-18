@@ -2234,7 +2234,7 @@ namespace CSharpLua {
       return XmlMetaProvider.GetNamespaceMapName(symbol, original);
     }
 
-    internal string GetNamespaceDefineName(INamespaceSymbol symbol, NamespaceDeclarationSyntax node) {
+    internal string GetNamespaceDefineName(INamespaceSymbol symbol, BaseNamespaceDeclarationSyntax node) {
       string original = node.Name.ToString();
       if (original == symbol.Name) {
         return namespaceRefactorNames_.GetOrDefault(symbol, original);

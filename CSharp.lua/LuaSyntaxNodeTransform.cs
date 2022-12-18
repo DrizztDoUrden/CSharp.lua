@@ -250,6 +250,16 @@ namespace CSharpLua {
       return namespaceDeclaration;
     }
 
+    public override LuaSyntaxNode VisitFileScopedNamespaceDeclaration(FileScopedNamespaceDeclarationSyntax node) {
+      var symbol = semanticModel_.GetDeclaredSymbol(node);
+      bool isContained = node.Parent.IsKind(SyntaxKind.NamespaceDeclaration);
+      string name = generator_.GetNamespaceDefineName(symbol, node);
+      LuaNamespaceDeclarationSyntax namespaceDeclaration = new LuaNamespaceDeclarationSyntax(name, isContained);
+      var statements = VisitTriviaAndNode(node, node.Members);
+      namespaceDeclaration.AddStatements(statements);
+      return namespaceDeclaration;
+    }
+
     private void BuildTypeMembers(LuaTypeDeclarationSyntax typeDeclaration, TypeDeclarationSyntax node) {
       foreach (var nestedTypeDeclaration in node.Members.Where(i => i.Kind().IsTypeDeclaration())) {
         var luaNestedTypeDeclaration = nestedTypeDeclaration.Accept<LuaTypeDeclarationSyntax>(this);
