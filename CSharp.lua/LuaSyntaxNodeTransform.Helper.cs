@@ -1218,41 +1218,46 @@ namespace CSharpLua {
     }
 
     private void CheckValueTypeClone(ITypeSymbol typeSymbol, IdentifierNameSyntax node, ref LuaExpressionSyntax expression, bool isPropertyField = false) {
-      if (typeSymbol.IsCustomValueType()
-        && !generator_.IsReadOnlyStruct(typeSymbol)
-        && !typeSymbol.IsNullableWithBasicElementType()
-        && !(typeSymbol.IsNullableType(out var nullableChildType) && generator_.IsReadOnlyStruct(nullableChildType))) {
-        bool need = false;
-        if (isPropertyField) {
-          need = true;
-          SyntaxNode current = node;
-          while (true) {
-            var parent = current.Parent;
-            var kind = parent.Kind();
-            if (kind.IsAssignment()) {
-              var assignment = (AssignmentExpressionSyntax)parent;
-              if (assignment.Left == current) {
-                need = false;
-              }
-              break;
-            }
+      if (!typeSymbol.IsCustomValueType()
+        || generator_.IsReadOnlyStruct(typeSymbol)
+        || typeSymbol.IsNullableWithBasicElementType()
+        || typeSymbol.IsNullableType(out var nullableChildType) && generator_.IsReadOnlyStruct(nullableChildType))
+        return;
 
-            if (kind == SyntaxKind.SimpleMemberAccessExpression) {
-              current = parent;
-            } else {
-              break;
-            }
+      bool need = false;
+      if (isPropertyField) {
+        need = true;
+        SyntaxNode current = node;
+        while (true) {
+          var parent = current.Parent;
+          var kind = parent.Kind();
+          if (kind.IsAssignment()) {
+            var assignment = (AssignmentExpressionSyntax)parent;
+            if (assignment.Left == current)
+              need = false;
+            break;
           }
-        } else {
-          switch (node.Parent.Kind()) {
-            case SyntaxKind.Argument: {
+
+          if (kind == SyntaxKind.InvocationExpression && semanticModel_.GetSymbolInfo(parent).Symbol is IMethodSymbol symbol && symbol.IsReadOnly) {
+            need = false;
+            break;
+          }
+
+          if (kind != SyntaxKind.SimpleMemberAccessExpression)
+            break;
+
+          current = parent;
+        }
+      } else {
+        switch (node.Parent.Kind()) {
+          case SyntaxKind.Argument: {
               var argument = (ArgumentSyntax)node.Parent;
               switch (argument.RefKindKeyword.Kind()) {
                 case SyntaxKind.RefKeyword:
                 case SyntaxKind.OutKeyword:
                 case SyntaxKind.InKeyword: {
-                  return;
-                }
+                    return;
+                  }
               }
 
               if (semanticModel_.GetSymbolInfo(argument.Parent.Parent).Symbol is IMethodSymbol symbol) {
@@ -1289,41 +1294,40 @@ namespace CSharpLua {
               }
               break;
             }
-            case SyntaxKind.EqualsValueClause: {
+          case SyntaxKind.EqualsValueClause: {
               var equalsValueClause = (EqualsValueClauseSyntax)node.Parent;
               if (equalsValueClause.Value == node) {
                 need = true;
               }
               break;
             }
-            case SyntaxKind.SimpleMemberAccessExpression: {
+          case SyntaxKind.SimpleMemberAccessExpression: {
               var memberAccess = (MemberAccessExpressionSyntax)node.Parent;
               if (memberAccess.Name == node) {
                 switch (memberAccess.Parent.Kind()) {
                   case SyntaxKind.EqualsValueClause: {
-                    need = true;
-                    break;
-                  }
+                      need = true;
+                      break;
+                    }
 
                   case SyntaxKind.SimpleAssignmentExpression: {
-                    var assignment = (AssignmentExpressionSyntax)memberAccess.Parent;
-                    if (assignment.Right == memberAccess) {
-                      need = true;
+                      var assignment = (AssignmentExpressionSyntax)memberAccess.Parent;
+                      if (assignment.Right == memberAccess) {
+                        need = true;
+                      }
+                      break;
                     }
-                    break;
-                  }
                 }
               }
               break;
             }
-          }
         }
+      }
 
-        if (need) {
-          expression = typeSymbol.IsNullableType()
-            ? LuaIdentifierNameSyntax.NullableClone.Invocation(expression)
-            : expression.MemberAccess(LuaIdentifierNameSyntax.Clone, true).Invocation();
-        }
+      if (need) {
+        expression = typeSymbol.IsNullableType()
+          ? LuaIdentifierNameSyntax.NullableClone.Invocation(expression)
+          : expression.MemberAccess(LuaIdentifierNameSyntax.Clone, true).Invocation();
       }
     }
 
