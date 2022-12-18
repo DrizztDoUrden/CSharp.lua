@@ -1821,8 +1821,8 @@ namespace CSharpLua {
     }
 
     internal bool IsEventField(IEventSymbol symbol) {
-      return isFieldEvents_.GetOrAdd(symbol, symbol =>
-        !IsImplicitInterfaceImplementation(symbol) && IsEventFieldInternal(symbol));
+      return false; // isFieldEvents_.GetOrAdd(symbol, symbol =>
+        // !IsImplicitInterfaceImplementation(symbol) && IsEventFieldInternal(symbol));
     }
 
     internal bool IsPropertyFieldOrEventField(ISymbol symbol) {
