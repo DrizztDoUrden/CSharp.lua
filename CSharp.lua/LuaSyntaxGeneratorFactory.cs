@@ -148,6 +148,7 @@ namespace CSharpLua {
                     lib,
                     decompilerSettings.ThrowOnAssemblyResolveErrors,
                     peFile.DetectTargetFrameworkId(),
+                    null,
                     decompilerSettings.LoadInMemory ? PEStreamOptions.PrefetchMetadata : PEStreamOptions.Default,
                     metadataOptions);
 
