@@ -4004,20 +4004,13 @@ namespace CSharpLua {
           return original;
         }
         case >= SpecialType.System_SByte and <= SpecialType.System_Double:
-          if (format != null || alignment != null) {
-            if (IsPreventDebug) {
-              return FormatAlignment(original, format, alignment);
-            } else {
-              if (alignment == null) {
-                if (original is LuaLiteralExpressionSyntax) {
-                  original = original.Parenthesized();
-                }
-                return original.MemberAccess(LuaIdentifierNameSyntax.ToStr, true).Invocation(format);
-              } else {
-                return FormatAlignment(original, format, alignment);
-              }
-            }
-          }
+          if (alignment != null)
+            return LuaIdentifierNameSyntax.SystemToString.Invocation(
+              original,
+              format ?? LuaIdentifierLiteralExpressionSyntax.Nil,
+              alignment);
+          if (format != null)
+            return LuaIdentifierNameSyntax.SystemToString.Invocation(original, format);
           return original;
       }
 
